@@ -44,6 +44,35 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+
+@st.cache_resource
+def _ensure_health_service_active():
+    """Start background RAG-Ops FastAPI health check service on port 8000 if not already running."""
+    import socket
+    import threading
+
+    def is_port_open(port: int = 8000) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.3)
+            return s.connect_ex(("127.0.0.1", port)) == 0
+
+    if not is_port_open(8000):
+        try:
+            import uvicorn
+            from health_api import app as fastapi_app
+
+            def _serve():
+                uvicorn.run(fastapi_app, host="0.0.0.0", port=8000, log_level="warning")
+
+            t = threading.Thread(target=_serve, daemon=True)
+            t.start()
+        except Exception:
+            pass
+    return True
+
+
+_ensure_health_service_active()
+
 # Comprehensive Custom CSS for a professional, clean, modern aesthetic
 st.markdown(
     """

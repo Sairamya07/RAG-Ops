@@ -1,28 +1,58 @@
-# Python
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *.pyo
+*$py.class
 
-# Virtual environment
+# Virtual environments
 .venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Environment variables / secrets
+# Environment variables & secrets (Never commit secrets!)
 .env
+.env.*
+.env.local
+!.env.example
 
-# ChromaDB
+# Vector databases and storage
 chroma_db/
+vector_store/
+*.db
+*.sqlite
+*.sqlite3
 
-# Streamlit
+# Streamlit secrets and caches
 .streamlit/secrets.toml
 
-# IDE
+# IDE & Editor files
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS
+# Operating System artifacts
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# User Uploaded Documents
+# User uploaded staging documents
 data/uploads/*
-!data/uploads/.gitkeep
+!data/uploads/.gitkeep
+
+# Test artifacts and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Build and packaging artifacts
+build/
+dist/
+*.egg-info/
+
+# Log files and temporary freeze dumps
+*.log
+installed-packages.txt

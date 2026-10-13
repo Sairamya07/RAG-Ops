@@ -84,6 +84,8 @@ Check Brainstorming / Ideation Inquiries
 ```text
 KnowRAG/
 ├── app.py                            # Streamlit web application with conversational UI & uploader
+├── health_api.py                     # FastAPI RAG-Ops operational monitoring & /health endpoint
+├── run.py                            # Single documented startup command runner
 ├── data/                             # Source knowledge-base documents
 │   ├── academic_programs.txt         # Baseline university document
 │   ├── campus_rules.txt              # Baseline university document
@@ -103,13 +105,15 @@ KnowRAG/
 │   └── rag_pipeline.py               # Grounded RAG orchestrator with page-aware citations
 ├── tests/                            # Automated testing and evaluation
 │   ├── __init__.py
+│   ├── test_health_and_ops.py        # RAG-Ops Part 1 verification suite (health, env, deps, startup)
 │   ├── test_conversational_suite.py  # 17-point comprehensive conversational & functional test suite
 │   ├── evaluate_rag.py               # Baseline 6-question automated regression suite
 │   └── test_upload_feature.py        # Dynamic upload, deduplication, and page retrieval suite
 ├── chroma_db/                        # Persistent ChromaDB collection directory
-├── requirements.txt                  # Project dependencies
+├── requirements.txt                  # Pinned project dependencies (FastAPI, Uvicorn, Streamlit, etc.)
 ├── README.md                         # Project documentation
 ├── .gitignore                        # Git exclusion rules (keeps .env and uploads secure)
+├── .env.example                      # Safe configuration template with placeholders (no real secrets)
 └── .env                              # Local environment variables (DO NOT COMMIT)
 ```
 
@@ -127,7 +131,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 2. Install Dependencies
+### 2. Install Pinned Dependencies
 
 ```powershell
 pip install -r requirements.txt
@@ -135,37 +139,142 @@ pip install -r requirements.txt
 
 ---
 
-## Environment Variables
+## Environment Variables Configuration
 
-Create a `.env` file in the project root:
+Copy the sanitized template `.env.example` to `.env`:
 
-```env
-# Required: Groq API Key
-GROQ_API_KEY=your_actual_groq_api_key_here
+```powershell
+# Windows PowerShell
+copy .env.example .env
 
-# Optional: Model override (default is openai/gpt-oss-20b)
-GROQ_MODEL=openai/gpt-oss-20b
+# Linux / macOS / Bash
+cp .env.example .env
 ```
 
-> **Security Note:** The `.env` file contains secret credentials and must **never** be committed to version control. It is excluded by `.gitignore`.
+Open `.env` and configure your API credentials:
+
+```env
+# Required: Groq Cloud API Key (obtain from https://console.groq.com/keys)
+GROQ_API_KEY=your_actual_groq_api_key_here
+
+# Optional: Groq LLM model override (default is openai/gpt-oss-20b)
+GROQ_MODEL=openai/gpt-oss-20b
+
+# Optional: Health API host & port (default is 0.0.0.0:8000)
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Optional: Streamlit UI port (default is 8501)
+STREAMLIT_PORT=8501
+```
+
+> **Security Note:** The `.env` file contains secret credentials and must **never** be committed to version control. It is strictly excluded by `.gitignore`. The repository provides `.env.example` as a safe placeholder template.
 
 ---
 
 ## Running the Application
 
-Launch the Streamlit web interface:
+### Single Documented Startup Command (Recommended)
+
+Run the unified orchestrator to launch both the **FastAPI Health API** and the **Streamlit Interactive UI** concurrently:
 
 ```powershell
-python -m streamlit run app.py
+python run.py
 ```
 
-The application will be accessible at: `http://localhost:8501`
+This single command automatically starts:
+- **RAG-Ops Health Check API**: `http://localhost:8000`
+- **KnowRAG Streamlit Assistant**: `http://localhost:8501`
+
+### Verifying the Health Endpoint
+
+Verify that the health check endpoint is operational and returns HTTP 200:
+
+```powershell
+# Using curl
+curl http://localhost:8000/health
+
+# Output:
+# {"status":"ok"}
+```
+
+Or using PowerShell:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/health
+# Output: status: ok
+```
+
+### Alternative: Running Services Independently
+
+You can also run the components individually:
+
+- **Health Check API only**:
+  ```powershell
+  python health_api.py
+  # Or: uvicorn health_api:app --host 0.0.0.0 --port 8000
+  ```
+
+- **Streamlit Web Application only**:
+  ```powershell
+  python -m streamlit run app.py
+  ```
+
 
 ---
 
 ## Running Automated Evaluation & Tests
 
-### 1. Comprehensive Conversational & Functional Test Suite (17 Tests)
+### 1. RAG-Ops Part 1 Verification Suite (Health Endpoint, Config, Deps, Startup)
+
+```powershell
+python tests\test_health_and_ops.py
+```
+
+| Test # | Objective | Result |
+| :---: | :--- | :---: |
+| **01** | `GET /health` Returns HTTP 200 & `{"status":"ok"}` | **PASS** |
+| **02** | `GET /` Root Service Discovery Endpoint | **PASS** |
+| **03** | Safe `.env.example` Template & Secret Sanitization | **PASS** |
+| **04** | Repository `.gitignore` Protection Rules | **PASS** |
+| **05** | Pinned Dependencies in `requirements.txt` | **PASS** |
+| **06** | Single Startup Runner (`run.py`) Command Integrity | **PASS** |
+
+**Result**: **6/6 PASS (100%)**
+
+### 2. RAG-Ops Part 2 Offline Pytest Suite (Mocked & Offline Unit Tests)
+
+Execute the offline pytest suite verifying chunking, top-k retrieval, `/health`, Question API schema, and empty-question validation:
+
+```powershell
+pytest tests\test_part2_rag_ops.py -v
+```
+
+Or run all pytest suites:
+
+```powershell
+pytest -v
+```
+
+| Test Function | Target Component | Status |
+| :--- | :--- | :---: |
+| `test_text_chunking_splits_document_and_preserves_metadata` | Text Chunking & Metadata Preservation | **PASS** |
+| `test_text_chunking_preserves_single_short_document` | Short Document Chunking Boundary | **PASS** |
+| `test_top_k_retrieval_returns_correct_k_nodes` | Top-k Semantic Retrieval with Mock Index | **PASS** |
+| `test_top_k_retrieval_respects_custom_k_parameter` | Top-k Retrieval Parameter Flexibility | **PASS** |
+| `test_get_health_endpoint_returns_200_and_ok` | `GET /health` HTTP 200 & `{"status":"ok"}` | **PASS** |
+| `test_get_root_endpoint_returns_200_and_status` | `GET /` Service Discovery | **PASS** |
+| `test_question_api_json_structure` | `POST /ask` Response JSON Schema & Types | **PASS** |
+| `test_question_api_aliases_return_consistent_structure` | `POST /question` & `POST /query` Aliases | **PASS** |
+| `test_empty_question_handling_empty_string` | `POST /ask` with `""` -> HTTP 400 | **PASS** |
+| `test_empty_question_handling_whitespace_only` | `POST /ask` with Whitespace -> HTTP 400 | **PASS** |
+| `test_empty_question_handling_missing_payload` | `POST /ask` with Empty Payload -> HTTP 400 | **PASS** |
+| `test_empty_question_handling_conversation_module` | Conversational Router Empty Fallback | **PASS** |
+| `test_rag_pipeline_offline_with_mocked_llm` | Offline Grounded RAG Generation | **PASS** |
+
+**Result**: **13/13 PASS (100% Offline, 0 API Calls)**
+
+### 3. Comprehensive Conversational & Functional Test Suite (17 Tests)
 
 ```powershell
 python tests\test_conversational_suite.py
@@ -193,7 +302,7 @@ python tests\test_conversational_suite.py
 
 **Result**: **17/17 PASS (100%)**
 
-### 2. Baseline Regression Suite
+### 4. Baseline Regression Suite
 
 ```powershell
 python tests\evaluate_rag.py
@@ -201,7 +310,7 @@ python tests\evaluate_rag.py
 
 **Result**: **6/6 PASS (100%)**
 
-### 3. Dynamic Upload Feature Test Suite
+### 5. Dynamic Upload Feature Test Suite
 
 ```powershell
 python tests\test_upload_feature.py

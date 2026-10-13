@@ -1,13 +1,31 @@
-# KnowRAG - Core Dependencies
-streamlit>=1.30.0
-chromadb>=0.4.0
-sentence-transformers>=2.2.0
-python-dotenv>=1.0.0
-llama-index-core>=0.10.0
-llama-index-embeddings-huggingface>=0.2.0
-llama-index-vector-stores-chroma>=0.1.0
-llama-index-llms-groq>=0.1.0
-pypdf>=4.0.0
+# ==============================================================================
+# KnowRAG / RAG-Ops — Pinned Dependencies
+# ==============================================================================
+# Core Streamlit & Web UI
+streamlit==1.64.0
 
-reportlab>=4.0.0
-reportlab>=4.0.0
+# Vector Database & Embeddings
+chromadb==1.5.9
+sentence-transformers==6.1.0
+
+# Environment & Configuration Management
+python-dotenv==1.2.3
+
+# LlamaIndex Core & Integrations
+llama-index-core==0.14.25
+llama-index-embeddings-huggingface==0.8.0
+llama-index-vector-stores-chroma==0.6.0
+llama-index-llms-groq==0.6.1
+
+# Document Processing & PDF Handling
+pypdf==6.19.0
+reportlab==5.0.1
+
+# RAG-Ops Health Check & API Server
+fastapi==0.143.0
+uvicorn==0.54.0
+httpx==0.28.1
+
+# Testing Framework & Mocking
+pytest==9.1.1
+pytest-mock==3.16.0
