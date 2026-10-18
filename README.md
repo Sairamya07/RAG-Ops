@@ -103,12 +103,25 @@ KnowRAG/
 │   ├── retrieval.py                  # Top-k semantic search & retriever caching
 │   ├── llm.py                        # Secure Groq LLM initialization & connectivity
 │   └── rag_pipeline.py               # Grounded RAG orchestrator with page-aware citations
+├── docs/                             # Deployment, rollback, and presentation documentation
+│   ├── rollback.md                   # Disaster recovery & rollback runbook (Docker, Git, ChromaDB)
+│   ├── part4-submission.md           # Part 4 submission evidence, live outputs, & verification matrix
+│   └── demo-script.md                # Timed 5-minute project demonstration walkthrough
 ├── tests/                            # Automated testing and evaluation
 │   ├── __init__.py
+│   ├── test_part4_smoke.py           # RAG-Ops Part 4 end-to-end smoke-test verification suite
+│   ├── test_part3_docker.py          # RAG-Ops Part 3 containerization verification suite
 │   ├── test_health_and_ops.py        # RAG-Ops Part 1 verification suite (health, env, deps, startup)
+│   ├── test_part2_rag_ops.py         # RAG-Ops Part 2 offline unit test suite (chunking, retrieval, API)
 │   ├── test_conversational_suite.py  # 17-point comprehensive conversational & functional test suite
 │   ├── evaluate_rag.py               # Baseline 6-question automated regression suite
 │   └── test_upload_feature.py        # Dynamic upload, deduplication, and page retrieval suite
+├── .github/
+│   └── workflows/
+│       └── ci.yml                    # GitHub Actions CI/CD (Pytest test suite + Docker Hub publish)
+├── Dockerfile                        # Multi-service container spec (Python 3.11-slim, non-root, healthcheck)
+├── .dockerignore                     # Docker build exclusions (secrets, venvs, vector dbs, caches)
+├── docker-compose.yml                # Docker Compose orchestration (port maps, persistent volumes)
 ├── chroma_db/                        # Persistent ChromaDB collection directory
 ├── requirements.txt                  # Pinned project dependencies (FastAPI, Uvicorn, Streamlit, etc.)
 ├── README.md                         # Project documentation
@@ -220,6 +233,135 @@ You can also run the components individually:
   python -m streamlit run app.py
   ```
 
+---
+
+## Docker Containerization & Orchestration (Part 3)
+
+KnowRAG is fully containerized using Docker and Docker Compose to provide consistent, reproducible, and isolated environments across development, testing, staging, and production.
+
+### Multi-Service Architecture in Docker
+
+A single lightweight container orchestrates both core services via `run.py`:
+1. **RAG-Ops Health & Monitoring API (FastAPI)**: Exposed on port **`8000`** with `/health`, `/ask`, and OpenAPI docs.
+2. **KnowRAG Interactive Assistant (Streamlit)**: Exposed on port **`8501`** for the conversational web interface.
+
+### Security & Optimization Highlights
+
+- **Base Image**: `python:3.11-slim` for minimized image footprint and reduced attack surface.
+- **Non-Root Execution**: Runs under a dedicated unprivileged user (`appuser`, UID 1000) rather than `root`.
+- **Layer Caching**: `requirements.txt` is copied and installed prior to copying the application source code.
+- **Leakage Prevention (`.dockerignore`)**: Excludes `.env`, `.git`, `.venv`, `__pycache__`, local database caches, and editor configurations so credentials and bloat are never baked into images.
+- **Integrated Health Check**: Container defines a native Docker `HEALTHCHECK` pinging `http://localhost:8000/health`.
+- **Persistent Storage**: Docker Compose mounts `./chroma_db` and `./data` so vector embeddings and uploaded documents survive container destruction and restarts.
+
+### 1. Running with Docker Compose (Recommended)
+
+Start the entire application in detached mode:
+
+```bash
+docker compose up -d --build
+```
+
+View real-time logs:
+
+```bash
+docker compose logs -f
+```
+
+Verify service status and healthcheck:
+
+```bash
+docker compose ps
+```
+
+Stop and remove the container:
+
+```bash
+docker compose down
+```
+
+### 2. Building & Running with Docker CLI Directly
+
+Build the Docker image:
+
+```bash
+docker build -t knowrag:latest .
+```
+
+Run the container with your Groq API key:
+
+```bash
+docker run -d \
+  --name knowrag-service \
+  -p 8000:8000 \
+  -p 8501:8501 \
+  -e GROQ_API_KEY="your_groq_api_key_here" \
+  -v "${PWD}/chroma_db:/app/chroma_db" \
+  -v "${PWD}/data:/app/data" \
+  knowrag:latest
+```
+
+### 3. Verifying the Container Health Endpoint
+
+Test the container's operational health endpoint from your host machine:
+
+```bash
+# Using curl
+curl http://localhost:8000/health
+
+# Output:
+# {"status":"ok"}
+```
+
+Or in PowerShell:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:8000/health
+# Output: status: ok
+```
+
+Access the web interfaces:
+- **Streamlit Assistant UI**: [http://localhost:8501](http://localhost:8501)
+- **FastAPI Health & API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 4. CI/CD Pipeline & Automated Publishing to Docker Hub
+
+The repository includes an automated GitHub Actions workflow at [`.github/workflows/ci.yml`](file:///.github/workflows/ci.yml):
+
+1. **Test Job**: Runs the full automated test suite (`tests/test_part2_rag_ops.py`, `tests/test_health_and_ops.py`, `tests/test_part3_docker.py`) across an isolated `ubuntu-latest` runner on Python 3.11.
+2. **Build & Publish Job**: Automatically triggers **only after tests pass** on pushes to the `main` branch.
+   - Sets up Docker Buildx.
+   - Securely logs into Docker Hub using GitHub Encrypted Secrets (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
+   - Builds the production multi-platform image with GitHub Actions caching (`type=gha`).
+   - Tags the image as `latest` and with the commit SHA (`<username>/knowrag:latest`).
+   - Pushes the image to Docker Hub with zero hardcoded credentials.
+
+#### Required GitHub Secrets Configuration:
+
+| Secret Name | Description |
+| :--- | :--- |
+| `DOCKERHUB_USERNAME` | Your Docker Hub username |
+| `DOCKERHUB_TOKEN` | Your Docker Hub Personal Access Token (PAT) with Read/Write permissions |
+
+---
+
+## Deployment, Rollback & Submission (Part 4)
+
+KnowRAG has been deployed and operationalized in a hardened multi-service Docker container running on a Linux engine (`linux/amd64`), thoroughly verified with live operational health and question-answering probes, backed by automated smoke tests, and documented with disaster recovery procedures.
+
+### Operational Verification Summary
+
+- **Live Container Status**: Running on Docker Desktop Linux Engine (`knowrag-service`, `Up ... (healthy)`).
+- **Operational Health Probe**: `GET /health` returns `HTTP 200 OK` and `{"status": "ok"}` via Uvicorn.
+- **Service Discovery**: `GET /` returns `HTTP 200 OK` and `{"status": "ok", "service": "KnowRAG"}`.
+- **RAG Inference**: `POST /ask` returns `HTTP 200 OK` with grounded answer and page-level source citations.
+- **Release Version**: Tagged as `v1.0.0` following standard semantic versioning.
+
+### Dedicated Documentation & Runbooks
+
+- **[Deployment Rollback & Disaster Recovery Runbook](docs/rollback.md)**: Actionable, step-by-step PowerShell and Bash commands for container rollbacks, git tag checkouts, ChromaDB vector store snapshots, and health verification gates.
+- **[Part 4 Submission & Evidence Report](docs/part4-submission.md)**: Complete deployment evidence, raw command outputs, container inspection logs, and requirement completion matrix.
+- **[Five-Minute Demonstration Script](docs/demo-script.md)**: Timed, minute-by-minute presentation walkthrough for evaluators and stakeholders.
 
 ---
 
@@ -274,7 +416,40 @@ pytest -v
 
 **Result**: **13/13 PASS (100% Offline, 0 API Calls)**
 
-### 3. Comprehensive Conversational & Functional Test Suite (17 Tests)
+### 3. RAG-Ops Part 3 Containerization & Docker Suite (Dockerfile, Compose, Security, CI/CD)
+
+```powershell
+python tests\test_part3_docker.py
+```
+
+| Test # | Objective | Result |
+| :---: | :--- | :---: |
+| **01** | Dockerfile Security, `python:3.11-slim`, `appuser`, Ports 8000 & 8501, & `HEALTHCHECK` | **PASS** |
+| **02** | `.dockerignore` Security Rules & Secret Isolation (`.env` protected, `!.env.example` retained) | **PASS** |
+| **03** | `docker-compose.yml` Specification, Port Mappings, Persistent Volumes, & Healthcheck | **PASS** |
+| **04** | GitHub Actions CI/CD Pipeline Docker Build & Publish Workflow with GitHub Secrets | **PASS** |
+
+**Result**: **4/4 PASS (100%)**
+
+### 4. RAG-Ops Part 4 End-to-End Smoke Test Suite
+
+```powershell
+python tests\test_part4_smoke.py
+```
+
+| Test # | Objective | Result |
+| :---: | :--- | :---: |
+| **01** | `GET /health` Returns HTTP 200 & `{"status":"ok"}` | **PASS** |
+| **02** | `GET /` Root Service Discovery Endpoint | **PASS** |
+| **03** | `POST /ask` Empty Input Validation (HTTP 400 Bad Request) | **PASS** |
+| **04** | `POST /ask` Greeting Schema & Response Structure | **PASS** |
+| **05** | `docs/rollback.md` Integrity & Command Verification | **PASS** |
+| **06** | `docs/part4-submission.md` Evidence & Completion Status | **PASS** |
+| **07** | `docs/demo-script.md` 5-Minute Timed Walkthrough | **PASS** |
+
+**Result**: **7/7 PASS (100%)**
+
+### 5. Comprehensive Conversational & Functional Test Suite (17 Tests)
 
 ```powershell
 python tests\test_conversational_suite.py
@@ -302,7 +477,7 @@ python tests\test_conversational_suite.py
 
 **Result**: **17/17 PASS (100%)**
 
-### 4. Baseline Regression Suite
+### 6. Baseline Regression Suite
 
 ```powershell
 python tests\evaluate_rag.py
@@ -310,7 +485,7 @@ python tests\evaluate_rag.py
 
 **Result**: **6/6 PASS (100%)**
 
-### 5. Dynamic Upload Feature Test Suite
+### 7. Dynamic Upload Feature Test Suite
 
 ```powershell
 python tests\test_upload_feature.py

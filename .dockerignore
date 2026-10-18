@@ -1,0 +1,59 @@
+# Git version control files
+.git/
+.gitignore
+.github/
+
+# Python bytecode, compilation, and cache artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Python virtual environments (never copy host venv into container)
+.venv
+.venv/
+**/.venv/**
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment files & secrets (CRITICAL: Never bake secrets into image)
+.env
+.env.*
+.env.local
+!.env.example
+
+# Vector databases & temporary caches (persisted via Docker volumes instead)
+chroma_db/
+vector_store/
+*.db
+*.sqlite
+*.sqlite3
+
+# Test caches & coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE, editor, and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build artifacts & package distributions
+build/
+dist/
+*.egg-info/
+
+# Logs and transient files
+*.log
+installed-packages.txt
+
+# Development container configuration
+.devcontainer/

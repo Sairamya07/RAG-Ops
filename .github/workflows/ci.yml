@@ -1,4 +1,4 @@
-name: RAG-Ops CI Pipeline
+name: RAG-Ops CI/CD Pipeline
 
 on:
   push:
@@ -26,6 +26,45 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run Pytest (Offline RAG-Ops & Health Tests)
+      - name: Run Pytest (Offline RAG-Ops, Health, Docker & Smoke Tests)
         run: |
-          pytest tests/test_part2_rag_ops.py tests/test_health_and_ops.py -v
+          pytest tests/test_part2_rag_ops.py tests/test_health_and_ops.py tests/test_part3_docker.py tests/test_part4_smoke.py -v
+
+  build-and-publish:
+    name: Build & Publish Docker Image to Docker Hub
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract Metadata (Tags & Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/knowrag
+          tags: |
+            type=raw,value=latest
+            type=sha,format=short
+
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

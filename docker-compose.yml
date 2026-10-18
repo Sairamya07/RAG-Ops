@@ -1,0 +1,31 @@
+services:
+  knowrag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: knowrag:latest
+    container_name: knowrag-service
+    ports:
+      - "8000:8000"   # RAG-Ops FastAPI Health & Monitoring API
+      - "8501:8501"   # Streamlit Interactive Knowledge Assistant Web UI
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - GROQ_MODEL=${GROQ_MODEL:-openai/gpt-oss-20b}
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - STREAMLIT_PORT=8501
+      - STREAMLIT_SERVER_HEADLESS=true
+      - STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
