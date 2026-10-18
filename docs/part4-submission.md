@@ -214,16 +214,19 @@ Following standard semantic versioning practices (`v<Major>.<Minor>.<Patch>`), t
 - **Tag Name**: `v1.0.0`
 - **Release Title**: `KnowRAG v1.0.0 — RAG-Ops Production Release`
 - **Target Branch**: `main`
+- **Release Commit SHA**: `c50c5a01e46ed00b1f07264fce3c0fc6f53f105f`
+- **Tag Date**: `Sun Oct 18 11:46:43 2026 +0530`
 - **Description**: Complete multi-service AI Knowledge Assistant with operational health check API, Docker containerization, dynamic PDF/TXT ingestion, ChromaDB vector persistence, GitHub Actions CI/CD automation, disaster recovery rollback runbook, and 100% automated test coverage.
 
-### Tag Creation Command (PowerShell)
+### Tag Verification Output
 
-```powershell
-# Create annotated release tag locally
-git tag -a v1.0.0 -m "Release v1.0.0: KnowRAG Production Release with Parts 1-4 Complete"
+```text
+v1.0.0          Release v1.0.0: KnowRAG Production Release with Parts 1-4 Complete
+commit c50c5a01e46ed00b1f07264fce3c0fc6f53f105f
+Author: Sairamya07 <ramyathangella434@gmail.com>
+Date:   Sun Oct 18 11:46:28 2026 +0530
 
-# Verify tag creation
-git tag -l -n
+    Complete Part 3 and Part 4: Docker containerization, deployment verification, rollback runbook, and release submission
 ```
 
 ---
